@@ -1,0 +1,238 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+--- [ KHỞI TẠO BIẾN TỔNG HỢP ] ---
+local lp = game:GetService("Players").LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local remoteF = ReplicatedStorage:WaitForChild("RemoteEventF")
+
+local hooks = { walkspeed = 16, jumppower = 50 }
+local godModeEnabled = false
+local noReloadEnabled = false
+local autoReloadEnabled = false
+local espZombieEnabled = false
+local autoKillLanEnabled = false -- Biến cho PzF 3
+local explosionSpeed = 0.03 -- Tốc độ nổ lan mặc định
+
+--- [ BYPASS METATABLE ] ---
+local originalIndex
+originalIndex = hookmetamethod(game, "__index", function(self, property)
+    if not checkcaller() and self:IsA("Humanoid") and self:IsDescendantOf(lp.Character) then
+        local lowerProperty = property:lower()
+        if hooks[lowerProperty] then return hooks[lowerProperty] end
+    end
+    return originalIndex(self, property)
+end)
+
+local originalNewIndex
+originalNewIndex = hookmetamethod(game, "__newindex", function(self, property, value)
+    if not checkcaller() and self:IsA("Humanoid") and self:IsDescendantOf(lp.Character) then
+        local lowerProperty = property:lower()
+        if hooks[lowerProperty] then
+            hooks[lowerProperty] = value
+            return
+        end
+    end
+    return originalNewIndex(self, property, value)
+end)
+
+--- [ KHỞI TẠO WINDOW ] ---
+local Window = Rayfield:CreateWindow({
+   Name = "🌟 TâmĐẹpZaii VVIP - ZOMBIE UPRISING",
+   LoadingTitle = "Đang nạp hệ thống VVIP + Kill Lan...",
+   LoadingSubtitle = "by Gemini AI",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "TamDepZaii_Configs", 
+      FileName = "ZombieUprisingConfig"
+   },
+   KeySystem = false
+})
+
+--- [ KHỞI TẠO TABS ] ---
+local MainTab = Window:CreateTab("⚡ Di Chuyển", 4483362458)
+local FarmTab = Window:CreateTab("💣 Kill Farm Lan", 4483362458) -- Tab PzF 3
+local WeaponTab = Window:CreateTab("🔫 Vũ Khí VVIP", 4483362458)
+local VisualTab = Window:CreateTab("👁️ Hiển Thị", 4483362458)
+
+--- [ TAB DI CHUYỂN ] ---
+MainTab:CreateSection("Cài đặt nhân vật")
+
+MainTab:CreateSlider({
+   Name = "Tốc Độ (WalkSpeed)",
+   Range = {16, 500}, Increment = 1, Suffix = " Speed", CurrentValue = 16,
+   Callback = function(Value)
+      hooks.walkspeed = Value
+      if lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+          lp.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = Value
+      end
+   end,
+})
+
+MainTab:CreateSlider({
+   Name = "Sức Nhảy (JumpPower)",
+   Range = {50, 500}, Increment = 1, Suffix = " Power", CurrentValue = 50,
+   Callback = function(Value)
+      hooks.jumppower = Value
+      if lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+          lp.Character:FindFirstChildOfClass("Humanoid").JumpPower = Value
+      end
+   end,
+})
+
+MainTab:CreateToggle({
+   Name = "Bất Tử (God Mode)",
+   CurrentValue = false,
+   Callback = function(Value)
+      godModeEnabled = Value
+      task.spawn(function()
+          while godModeEnabled do
+              pcall(function()
+                  local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+                  if hum then
+                      hum.MaxHealth = 99999
+                      hum.Health = 99999
+                  end
+              end)
+              task.wait(0.5)
+          end
+      end)
+   end,
+})
+
+--- [ TAB KILL FARM LAN - PzF 3 ] ---
+FarmTab:CreateSection("Cấu hình Pháo Nổ Lan (PzF 3)")
+
+FarmTab:CreateToggle({
+   Name = "Kích Hoạt Auto Kill Lan",
+   CurrentValue = false,
+   Flag = "AutoKillLan_Toggle",
+   Callback = function(Value)
+      autoKillLanEnabled = Value
+      if Value then
+          task.spawn(function()
+              while autoKillLanEnabled do
+                  pcall(function()
+                      local zombies = workspace:FindFirstChild("Zombies") or workspace:FindFirstChild("Enemies")
+                      local char = lp.Character
+                      local myHead = char and char:FindFirstChild("Head")
+                      
+                      if zombies and myHead then
+                          for _, z in pairs(zombies:GetChildren()) do
+                              if not autoKillLanEnabled then break end
+                              
+                              local zRoot = z:FindFirstChild("HumanoidRootPart")
+                              local zHum = z:FindFirstChild("Humanoid")
+                              
+                              if zRoot and zHum and zHum.Health > 0 then
+                                  local args = {
+                                      [1] = {
+                                          ["ModelType"] = "Character",
+                                          ["TargetPos"] = zRoot.Position,
+                                          ["Model"] = z,
+                                          ["PlayerName"] = lp.Name,
+                                          ["WeaponName"] = "PzF 3",
+                                          ["SourcePart"] = myHead,
+                                          ["SourcePos"] = myHead.Position
+                                      }
+                                  }
+                                  remoteF:FireServer(unpack(args))
+                                  task.wait(explosionSpeed) -- Sử dụng biến từ Slider
+                              end
+                          end
+                      end
+                  end)
+                  task.wait(0.1)
+              end
+          end)
+      end
+   end,
+})
+
+FarmTab:CreateSlider({
+   Name = "Tốc độ nổ (Giảm = Nhanh)",
+   Range = {0.01, 1}, Increment = 0.01, Suffix = "s", CurrentValue = 0.03,
+   Callback = function(Value)
+      explosionSpeed = Value
+   end,
+})
+
+--- [ TAB VŨ KHÍ ] ---
+WeaponTab:CreateSection("Hệ thống nạp đạn VIP")
+
+WeaponTab:CreateToggle({
+   Name = "No Reload (Vô hạn băng đạn)",
+   CurrentValue = false,
+   Callback = function(Value)
+      noReloadEnabled = Value
+      task.spawn(function()
+          while noReloadEnabled do
+              for _, v in pairs(getgc(true)) do
+                  if type(v) == "table" and rawget(v, "Ammo") then v.Ammo = 999 end
+                  if type(v) == "table" and rawget(v, "Clip") then v.Clip = 999 end
+              end
+              task.wait(0.5)
+          end
+      end)
+   end,
+})
+
+WeaponTab:CreateToggle({
+   Name = "Auto Reload (Nạp đạn siêu tốc)",
+   CurrentValue = false,
+   Callback = function(Value)
+      autoReloadEnabled = Value
+      task.spawn(function()
+          while autoReloadEnabled do
+              for _, v in pairs(getgc(true)) do
+                  if type(v) == "table" and (rawget(v, "Ammo") or rawget(v, "Clip")) then
+                      if rawget(v, "ReloadTime") then v.ReloadTime = 0.01 end
+                      if rawget(v, "ReloadSpeed") then v.ReloadSpeed = 100 end
+                  end
+              end
+              task.wait(1)
+          end
+      end)
+   end,
+})
+
+--- [ TAB HIỂN THỊ ] ---
+VisualTab:CreateSection("Soi Zombie xuyên tường")
+
+VisualTab:CreateToggle({
+   Name = "ESP Zombie Uprising",
+   CurrentValue = false,
+   Callback = function(Value)
+      espZombieEnabled = Value
+      if not Value then
+          local zFolder = workspace:FindFirstChild("Zombies") or workspace:FindFirstChild("Enemies")
+          if zFolder then
+              for _, z in pairs(zFolder:GetChildren()) do
+                  if z:FindFirstChild("Highlight") then z.Highlight:Destroy() end
+              end
+          end
+      else
+          task.spawn(function()
+              while espZombieEnabled do
+                  local zFolder = workspace:FindFirstChild("Zombies") or workspace:FindFirstChild("Enemies")
+                  if zFolder then
+                      for _, z in pairs(zFolder:GetChildren()) do
+                          if z:IsA("Model") and not z:FindFirstChild("Highlight") then
+                              local hl = Instance.new("Highlight", z)
+                              hl.FillColor = Color3.fromRGB(255, 0, 0)
+                              hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                              hl.FillTransparency = 0.5
+                          end
+                      end
+                  end
+                  task.wait(2)
+              end
+          end)
+      end
+   end,
+})
+
+Rayfield:Notify({
+   Title = "🌟 TâmĐẹpZaii VVIP V20",
+   Content = "Đã gộp thành công Kill Lan PzF 3!",
+   Duration = 5,
+})
