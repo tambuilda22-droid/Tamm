@@ -1,0 +1,378 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+--- [ 🎭CẤU HÌNH HỆ THỐNG ] ---
+local Window = Rayfield:CreateWindow({
+   Name = "🌠TâmVIP❄- ModVip v4.1 (Updated)",
+   LoadingTitle = "Đang Nạp Siêu Cấp...",
+   LoadingSubtitle = "🌠by Tâm06🌀 | Target Gần Nhất",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "TamVIP_Configs", 
+      FileName = "MainConfig"
+   },
+   KeySystem = false 
+})
+
+--- [🎭KHỞI TẠO BIẾN ] ---
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local lp = Players.LocalPlayer
+local remoteF = ReplicatedStorage:WaitForChild("RemoteEventF")
+
+local settings = {
+    range = 500,
+    damage_mult = 10
+}
+
+-- Hệ thống Hooks
+local hooks = {
+    walkspeed = 40,
+    jumppower = 100
+}
+
+_G.AutoFarmCoin = false
+_G.AutoKillLan = false
+_G.GodMode = false
+_G.NoRecoil = false
+_G.NoReload = false
+_G.ESP_Zombie = false
+
+--- [ 🎭HỆ THỐNG BYPASS HOOKS - GIỮ NGUYÊN ] ---
+local originalIndex
+local originalNewIndex
+
+originalIndex = hookmetamethod(game, "__index", function(self, property)
+    if not checkcaller() and self:IsA("Humanoid") and self:IsDescendantOf(lp.Character) then
+        local lowerProperty = property:lower()
+        if hooks[lowerProperty] then
+            return hooks[lowerProperty]
+        end
+    end
+    return originalIndex(self, property)
+end)
+
+originalNewIndex = hookmetamethod(game, "__newindex", function(self, property, value)
+    if not checkcaller() and self:IsA("Humanoid") and self:IsDescendantOf(lp.Character) then
+        local lowerProperty = property:lower()
+        if hooks[lowerProperty] then
+            hooks[lowerProperty] = value
+            return
+        end
+    end
+    
+    if _G.NoRecoil and not checkcaller() and (property == "Recoil" or property == "Shake") then
+        return originalNewIndex(self, property, 0)
+    end
+    
+    return originalNewIndex(self, property, value)
+end)
+
+--- [ 🎭TABS ] ---
+local FarmTab = Window:CreateTab("💣 Auto Farm", "bomb")
+local PlayerTab = Window:CreateTab("⚡ Player", "user")
+local WeaponTab = Window:CreateTab("🔫 Vũ Khí", "crosshair")
+local VisualTab = Window:CreateTab("👁️ Hiển Thị", "eye")
+
+--- [⚡ TAB AUTO FARM ] ---
+FarmTab:CreateSection("Ưu Tiên Mục Tiêu Gần Nhất - Damage x10")
+
+FarmTab:CreateToggle({
+   Name = "🌠Giết Chậm (☃️SMAW)",
+   CurrentValue = false,
+   Callback = function(Value) _G.AutoFarmCoin = Value end,
+})
+
+FarmTab:CreateToggle({
+   Name = "🌠Giết Nhanh (☃️PzF 3)",
+   CurrentValue = false,
+   Callback = function(Value) _G.AutoKillLan = Value end,
+})
+
+local lastDamageValue = 5
+
+FarmTab:CreateSlider({
+    Name = "🌠 Hỏa lực (☃️ Max Sát Thương)",
+    Range = {1, 200}, -- Mở rộng giới hạn nếu bạn muốn damage cao hơn
+    Increment = 10,
+    CurrentValue = lastDamageValue,
+    Callback = function(Value)
+        -- Cập nhật giá trị vào hệ thống
+        settings.damage_mult = Value
+        
+        -- Logic True Damage & Packet Mode
+        if Value <= 1 then
+            settings.true_damage = false
+            settings.packet_mode = true -- Chế độ gửi packet gốc
+        else
+            settings.true_damage = true
+            settings.packet_mode = false
+            -- Tối ưu: Nếu damage quá cao, tự động điều chỉnh khoảng cách gửi (Delay)
+            -- giúp tránh bị kick (Anti-cheat)
+            settings.attack_speed = math.clamp(0.1 / (Value / 10), 0.01, 0.1) 
+        end
+
+        lastDamageValue = Value
+    end
+})
+
+--- [ 🎭TAB PLAYER ] ---
+PlayerTab:CreateSection("Chỉ số nhân vật")
+
+PlayerTab:CreateToggle({
+   Name = "🕶️Bất Tử (🌀God Mode v2)",
+   CurrentValue = false,
+   Callback = function(Value) _G.GodMode = Value end,
+})
+
+PlayerTab:CreateSlider({
+   Name = "🕶️Chạy Nhanh (🌀WalkSpeed)",
+   Range = {16, 300},
+   Increment = 1,
+   CurrentValue = 40,
+   Callback = function(v) 
+       hooks.walkspeed = v 
+       if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+           lp.Character.Humanoid.WalkSpeed = v
+       end
+   end,
+})
+
+--- [ 🎭TAB VŨ KHÍ ] ---
+WeaponTab:CreateSection("Weapon Modifications")
+
+WeaponTab:CreateToggle({
+   Name = "🌠No Giật Súng (🔫No Recoil)",
+   CurrentValue = false,
+   Callback = function(Value) _G.NoRecoil = Value end,
+})
+
+WeaponTab:CreateToggle({
+   Name = "🌠Smart Scan V2 (🔫Siêu Cấp + Đạn Tức Thời)",
+   CurrentValue = false,
+   Callback = function(Value)
+      _G.SmartScan = Value
+      if Value then
+          task.spawn(function()
+              while _G.SmartScan do
+                  -- Quét toàn bộ bảng dữ liệu trong bộ nhớ máy ảo
+                  for _, v in pairs(getgc(true)) do
+                      if type(v) == "table" then
+                          
+                          -- [1] TỐC ĐỘ ĐẠN & CHÍNH XÁC (Bullet Speed 3000)
+                          -- Chỉnh tất cả các biến liên quan đến tốc độ bay của đạn
+                          local bulletStats = {
+                              "BulletSpeed", "MuzzleVelocity", "ProjectileSpeed", 
+                              "Velocity", "Speed", "TravelSpeed"
+                          }
+                          for _, stat in ipairs(bulletStats) do
+                              if rawget(v, stat) and type(v[stat]) == "number" then
+                                  v[stat] = 3000 -- Đạn bay không chờ đợi
+                              end
+                          end
+
+                          -- [2] TỰ ĐỘNG HÓA & DPS MAX
+                          if rawget(v, "FireMode") or rawget(v, "Mode") then
+                              v.FireMode = "Auto"
+                              v.Mode = "Auto"
+                          end
+                          
+                          local fastStats = {
+                             "FireRate", "Delay", "ShootDelay", "TimeBetweenShots", 
+                             "ReloadTime", "ReloadDuration", "EmptyReloadTime",
+                             "RecoveryTime", "RecoilReturnSpeed"
+                          }
+                          for _, stat in ipairs(fastStats) do
+                              if rawget(v, stat) then
+                                  v[stat] = 0.01 -- Ép tốc độ bắn lên mức tối đa
+                              end
+                          end
+
+                          -- [3] XÓA ĐỘ GIẬT & ĐỘ LỆCH (Zero Spread)
+                          if rawget(v, "Spread") or rawget(v, "MaxSpread") then
+                              v.Spread = 0.1
+                              v.MaxSpread = 0.1
+                              v.MinSpread = 0.1
+                          end
+                      end
+                  end
+                  task.wait(3) -- Quét lại sau mỗi 3s để áp dụng cho súng mới
+              end
+          end)
+      end
+   end,
+})
+
+--- [ 🎭TAB TROLL - ĐÃ CẬP NHẬT ] ---
+local TrollTab = Window:CreateTab("🤡 Troll Menu", "ghost")
+
+TrollTab:CreateSection("Tính năng đẩy & phá Zombie")
+
+TrollTab:CreateButton({
+    Name = "🛡️ Đẩy Zombie Ra Xa (Full Map)",
+    Callback = function()
+        local character = lp.Character
+        local myRoot = character and character:FindFirstChild("HumanoidRootPart")
+        local pushDistance = 30 -- Tăng lên 30m cho gắt
+
+        if myRoot then
+            local count = 0
+            -- Quét toàn bộ Workspace để tìm bất cứ thứ gì có Humanoid (trừ bạn)
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("Humanoid") and obj.Parent ~= character then
+                    local zRoot = obj.Parent:FindFirstChild("HumanoidRootPart")
+                    if zRoot then
+                        -- Tính toán hướng và đẩy
+                        local direction = (zRoot.Position - myRoot.Position).Unit
+                        -- Sử dụng CFrame.new để tránh lỗi cộng Vector trực tiếp
+                        zRoot.CFrame = CFrame.new(zRoot.Position + (direction * pushDistance))
+                        count = count + 1
+                    end
+                end
+            end
+
+            Rayfield:Notify({
+                Title = "Thành công!",
+                Content = "Đã đẩy bay " .. tostring(count) .. " mục tiêu!",
+                Duration = 2,
+                Image = "rewind",
+            })
+        else
+            Rayfield:Notify({
+                Title = "Lỗi",
+                Content = "Không tìm thấy HumanoidRootPart của bạn!",
+                Duration = 2,
+            })
+        end
+    end,
+})
+
+TrollTab:CreateSlider({
+   Name = "📏 Độ cao nhân vật (Troll Zombie)",
+   Range = {-5, 20},
+   Increment = 1,
+   CurrentValue = 2,
+   Callback = function(v)
+       if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+           lp.Character.Humanoid.HipHeight = v
+       end
+   end,
+})
+
+local ghostEnabled = false
+TrollTab:CreateToggle({
+    Name = "👻 Chế độ Linh Hồn (Tàng hình)",
+    CurrentValue = false,
+    Callback = function(Value)
+        ghostEnabled = Value
+        for _, part in pairs(lp.Character:GetChildren()) do
+            if part:IsA("BasePart") or part:IsA("MeshPart") then
+                part.Transparency = ghostEnabled and 0.5 or 0 -- Độ mờ 50%
+            elseif part:IsA("Accessory") and part:FindFirstChild("Handle") then
+                part.Handle.Transparency = ghostEnabled and 0.5 or 0
+            end
+        end
+    end
+})
+
+--- [ 🎭TAB HIỂN THỊ ] ---
+VisualTab:CreateSection("Visuals")
+
+VisualTab:CreateToggle({
+   Name = "🕶️Esp Zombie (🌀Highlight)",
+   CurrentValue = false,
+   Callback = function(Value) _G.ESP_Zombie = Value end,
+})
+
+--- [ ⚡HỆ THỐNG VÒNG LẶP CORE ] ---
+
+-- God Mode Loop
+RunService.Heartbeat:Connect(function()
+    if _G.GodMode and lp.Character and lp.Character:FindFirstChild("Humanoid") then
+        lp.Character.Humanoid.Health = lp.Character.Humanoid.MaxHealth
+    end
+end)
+
+-- Farm Loop (⚡SỬA LẠI ĐỂ ƯU TIÊN CON GẦN NHẤT)
+task.spawn(function()
+    while task.wait(0.1) do 
+        if _G.AutoFarmCoin or _G.AutoKillLan then
+            local char = lp.Character
+            local head = char and char:FindFirstChild("Head")
+            local enemies = workspace:FindFirstChild("Zombies") or workspace:FindFirstChild("Enemies")
+            
+            if head and enemies then
+                local target = nil
+                local dist = settings.range
+
+                -- Quét tìm mục tiêu gần nhất trong Range
+                for _, z in ipairs(enemies:GetChildren()) do
+                    local zRoot = z:FindFirstChild("HumanoidRootPart")
+                    local zHum = z:FindFirstChild("Humanoid")
+                    
+                    if zRoot and zHum and zHum.Health > 0 then
+                        local magnitude = (zRoot.Position - head.Position).Magnitude
+                        if magnitude < dist then
+                            dist = magnitude
+                            target = z
+                        end
+                    end
+                end
+
+                -- Nếu tìm thấy con gần nhất thì thực hiện bắn
+                if target then
+                    local zRoot = target:FindFirstChild("HumanoidRootPart")
+                    local weapon = _G.AutoKillLan and "PzF 3" or "SMAW"
+                    local args = {
+                        [1] = {
+                            ["ModelType"] = "Character",
+                            ["TargetPos"] = zRoot.Position,
+                            ["Model"] = target,
+                            ["PlayerName"] = lp.Name,
+                            ["WeaponName"] = weapon,
+                            ["SourcePart"] = head,
+                            ["SourcePos"] = head.Position
+                        }
+                    }
+                    
+                    -- Vòng lặp gửi packets sát thương (Giữ nguyên logic cũ)
+                    for i = 1, settings.damage_mult do
+                        remoteF:FireServer(unpack(args))
+                    end
+                end
+            end
+        end
+    end
+end)
+
+local function SetupESP(zombie)
+    -- Chờ 0.5 giây để Zombie load đủ các bộ phận từ Server
+    task.wait(0.5)
+    
+    if _G.ESP_Zombie and zombie:IsA("Model") then
+        -- Kiểm tra xem đã có Highlight chưa để tránh trùng lặp
+        if not zombie:FindFirstChild("Highlight") then
+            local hl = Instance.new("Highlight")
+            hl.Parent = zombie
+            hl.FillColor = Color3.fromRGB(255, 0, 0)
+            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+            hl.FillTransparency = 0.5
+        end
+    end
+end
+
+-- Kết nối với Folder chứa Zombie
+local enemyFolder = workspace:FindFirstChild("Zombies") or workspace:FindFirstChild("Enemies")
+
+if enemyFolder then
+    -- Khi có một con Zombie mới xuất hiện trong Folder
+    enemyFolder.ChildAdded:Connect(function(newChild)
+        SetupESP(newChild)
+    end)
+end
+
+Rayfield:Notify({
+   Title = "🕶️ TâmĐẹpZaii❄️",
+   Content = "Hệ thống v4 (Target Gần Nhất) đã sẵn sàng!",
+   Duration = 5,
+})
