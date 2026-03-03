@@ -1,0 +1,869 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+--- [ 🎭CẤU HÌNH HỆ THỐNG ] ---
+local Window = Rayfield:CreateWindow({
+   Name = "🌠TâmVIP❄- ModVip V5 (CHÍNH THỨC)",
+   LoadingTitle = "🎭Tâm DEV Siêu Cấp...",
+   LoadingSubtitle = "🌠Tâm28/9/206🌀 | Target Gần Nhất",
+   ConfigurationSaving = { Enabled = true, FolderName = "TâmDev_Config", FileName = "MainConfig" },
+   KeySystem = false,
+   Theme = "Dark"
+})
+
+--- [🎭KHỞI TẠO BIẾN ] ---
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local workspace = game:GetService("Workspace")
+local lp = Players.LocalPlayer
+local remoteF = ReplicatedStorage:WaitForChild("RemoteEventF")
+
+local settings = {
+    range = 500,
+    damage_mult = 2000,
+    accuracy = 100,
+    recoil = 0,
+    spread = 0,
+    BulletSpeed = 1500
+}
+
+local TargetPart = "Head"
+local settings = { range = 500, damage_mult = 10, attack_speed = 0.1 }
+local hooks = { walkspeed = 40, jumppower = 100 }
+
+_G.AutoKillLan = false
+_G.GodMode = false
+_G.SmartScan = false
+_G.OldGunStats = {}
+_G.AutoReload = false
+_G.ESP_Zombie = false
+_G.ZombieColor = Color3.fromRGB(255, 0, 0)
+_G.TargetDistance = 1000
+
+--- [ 🎭HỆ THỐNG BYPASS HOOKS - GIỮ NGUYÊN ] ---
+local originalIndex; originalIndex = hookmetamethod(game, "__index", function(self, property)
+    if not checkcaller() and self:IsA("Humanoid") and self:IsDescendantOf(lp.Character) then
+        local val = hooks[property:lower()]
+        if val then return val end
+    end
+    return originalIndex(self, property)
+end)
+
+local originalNewIndex; originalNewIndex = hookmetamethod(game, "__newindex", function(self, property, value)
+    if not checkcaller() and self:IsA("Humanoid") and self:IsDescendantOf(lp.Character) then
+        local low = property:lower()
+        if hooks[low] then hooks[low] = value return end
+    end
+    return originalNewIndex(self, property, value)
+end)
+
+--- [ 🎭TABS ] ---
+local FarmTab = Window:CreateTab("💣 Auto Farm", "bomb")
+local PlayerTab = Window:CreateTab("⚡ Player", "user")
+local TrollTab = Window:CreateTab("🎭 Tiện ích & Troll", 4483362458)
+local ChillTab = Window:CreateTab("❄️ Hiệu Ứng Chill", "snowflake")
+local VisualTab = Window:CreateTab("👁️ Hiển Thị", "eye")
+local WeaponTab = Window:CreateTab("🔫 Vũ Khí", "crosshair")
+
+--- [⚡ TAB AUTO FARM ] ---
+FarmTab:CreateSection("🎗️TÂM ĐẸP TRAI NHẤT HÀNH TINH - DAMAME X10")
+
+FarmTab:CreateToggle({
+   Name = "🌠Giết Chậm (🎧SMAW)",
+   CurrentValue = false,
+   Callback = function(Value) _G.AutoFarmCoin = Value end,
+})
+
+FarmTab:CreateToggle({
+   Name = "🌠Giết Nhanh (🎧PzF 3)",
+   CurrentValue = false,
+   Callback = function(Value) _G.AutoKillLan = Value end,
+})
+
+local lastDamageValue = 10
+
+FarmTab:CreateSlider({
+    Name = "🥶 Hỏa lực (🎼kéo lên 80/160 rồi kéo về 1)",
+    Range = {1, 300}, -- Mở rộng giới hạn nếu bạn muốn damage cao hơn
+    Increment = 10,
+    CurrentValue = lastDamageValue,
+    Callback = function(Value)
+        -- Cập nhật giá trị vào hệ thống
+        settings.damage_mult = Value
+        
+        -- Logic True Damage & Packet Mode
+        if Value <= 1 then
+            settings.true_damage = false
+            settings.packet_mode = true -- Chế độ gửi packet gốc
+        else
+            settings.true_damage = true
+            settings.packet_mode = false
+            -- Tối ưu: Nếu damage quá cao, tự động điều chỉnh khoảng cách gửi (Delay)
+            -- giúp tránh bị kick (Anti-cheat)
+            settings.attack_speed = math.clamp(0.1 / (Value / 15), 0.01, 0.1) 
+        end
+
+        lastDamageValue = Value
+    end
+})
+
+FarmTab:CreateSlider({
+    Name = "🌠 Hỏa lực (🎼làm như ở trên)",
+    Range = {1, 300},
+    Increment = 10,
+    CurrentValue = 10,
+    Callback = function(Value)
+        settings.damage_mult = Value
+        settings.area_radius = Value / 30 -- Bán kính nổ tỷ lệ thuận với thanh trượt
+        settings.explosion_transparency = 1 - (Value / 15) -- Giá trị càng cao, nổ càng mờ/nhạt.
+        settings.attack_speed = math.clamp(0.1 / (Value / 1000), 0.5, 0.5) -- 0.1 hàng cuối 0.8
+    end
+})
+
+--- [ 🎭TAB PLAYER ] ---
+PlayerTab:CreateSection("CHỨC NĂNG BÁ ĐẠO VIP PREMIUM")
+
+PlayerTab:CreateToggle({
+   Name = "🥶 Bất Tử (🌀Inf\HP:VIP)",
+   CurrentValue = false,
+   Callback = function(Value) _G.GodMode = Value end,
+})
+
+PlayerTab:CreateSlider({
+   Name = "🥶 Chạy Nhanh (🌀ChạyNhanh)",
+   Range = {20, 300},
+   Increment = 1,
+   CurrentValue = 40,
+   Callback = function(v) 
+       hooks.walkspeed = v 
+       if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+           lp.Character.Humanoid.WalkSpeed = v
+       end
+   end,
+})
+
+PlayerTab:CreateSlider({
+   Name = "🥶Sức Nhảy (🌀Bay:BypassVIP)",
+   Range = {40, 200}, Increment = 1, CurrentValue = 20,
+   Callback = function(Value) 
+      hooks.jumppower = Value 
+      if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+          lp.Character.Humanoid.JumpPower = Value
+      end
+   end,
+})
+
+--- [🎭 Tab Troll & Tiện ích ] ---
+TrollTab:CreateSection("CHỨC NĂNG BÁ ĐẠO VIP PREMIUM")
+
+-- Thêm Slider của bạn vào Tab vừa tạo
+TrollTab:CreateSlider({
+   Name = "📏 Độ cao nhân vật (Troll Zombie)",
+   Range = {-5, 20},
+   Increment = 1,
+   CurrentValue = 2,
+   Callback = function(v)
+       -- Đảm bảo biến 'lp' (LocalPlayer) đã được định nghĩa ở đầu script
+       local lp = game.Players.LocalPlayer
+       if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+           lp.Character.Humanoid.HipHeight = v
+       end
+   end,
+})
+
+-- Thêm một nút ví dụ khác để Tab bớt trống trải
+TrollTab:CreateButton({
+   Name = "🏃 Reset Độ cao",
+   Callback = function()
+       local lp = game.Players.LocalPlayer
+       if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+           lp.Character.Humanoid.HipHeight = 2 -- Độ cao mặc định
+       end
+   end,
+})
+
+local noAnim = false
+
+TrollTab:CreateToggle({
+    Name = "🗿 Bức Tượng (No Anim)",
+    CurrentValue = false,
+    Callback = function(Value)
+        noAnim = Value
+        
+        local player = game.Players.LocalPlayer
+        if not player.Character then return end
+        
+        local anim = player.Character:FindFirstChild("Animate")
+        if anim then
+            anim.Disabled = noAnim
+        end
+    end,
+})
+
+local airSurf = false
+TrollTab:CreateToggle({
+    Name = "🏄 Kiểu: Lướt sóng trên không",
+    CurrentValue = false,
+    Callback = function(v)
+        airSurf = v
+        local char = lp.Character
+        local root = (char:FindFirstChild("LowerTorso") and char.LowerTorso:FindFirstChild("Root")) or 
+                     (char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart:FindFirstChild("RootJoint"))
+        
+        if airSurf then
+            char.Humanoid.HipHeight = 10
+            task.spawn(function()
+                local t = 0
+                while airSurf and task.wait() do
+                    t = t + 0.1
+                    if root then
+                        -- Tạo độ dập dềnh như sóng biển
+                        local bobbing = math.sin(t) * 0.5
+                        root.C0 = CFrame.new(0, bobbing, 0) * CFrame.Angles(math.rad(-70), math.rad(180), math.rad(20))
+                    end
+                end
+            end)
+        else
+            -- Reset
+            if root then
+                root.C0 = CFrame.new(0, 0, 0) * CFrame.Angles(math.rad(-90), math.rad(180), 0)
+                char.Humanoid.HipHeight = 2
+            end
+        end
+    end
+})
+
+local spinning = false
+TrollTab:CreateToggle({
+    Name = "🚁 Chế độ: Trực thăng (Xoay Nhanh)",
+    CurrentValue = false,
+    Callback = function(Value)
+        spinning = Value
+        local char = lp.Character
+        local root = (char:FindFirstChild("LowerTorso") and char.LowerTorso:FindFirstChild("Root")) or 
+                     (char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart:FindFirstChild("RootJoint"))
+        
+        task.spawn(function()
+            local angle = 0
+            while spinning and task.wait() do
+                angle = angle + 30
+                if root then
+                    root.C0 = CFrame.new(0, 0, 0) * CFrame.Angles(math.rad(-90), math.rad(angle), 0)
+                end
+            end
+        end)
+    end,
+})
+
+TrollTab:CreateToggle({
+   Name = "🌗Hiệu Ứng Lửa Đen",
+   CurrentValue = false,
+   Callback = function(Value)
+       local char = game.Players.LocalPlayer.Character
+       if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+       
+       local root = char.HumanoidRootPart
+
+       if Value then
+           -- Tạo hiệu ứng Lửa Đen
+           local fire = Instance.new("Fire")
+           fire.Name = "VipFire"
+           fire.Parent = root
+           fire.Size = 6
+           fire.Heat = 5
+           fire.Color = Color3.fromRGB(0, 0, 0) -- Màu lõi đen
+           fire.SecondaryColor = Color3.fromRGB(50, 50, 50) -- Màu rìa xám đậm
+
+           -- Tạo hiệu ứng Khói
+           local smoke = Instance.new("Smoke")
+           smoke.Name = "VipSmoke"
+           smoke.Parent = root
+           smoke.Size = 0.1
+           smoke.Opacity = 0.5
+           smoke.RiseVelocity = 2
+           smoke.Color = Color3.fromRGB(20, 20, 20) -- Màu khói tối
+       else
+           -- Xóa bỏ hiệu ứng khi tắt
+           if root:FindFirstChild("VipFire") then
+               root.VipFire:Destroy()
+           end
+           if root:FindFirstChild("VipSmoke") then
+               root.VipSmoke:Destroy()
+           end
+       end
+   end,
+})
+
+TrollTab:CreateToggle({
+   Name = "🌗 Hiệu Ứng Lửa Xanh",
+   CurrentValue = false,
+   Callback = function(Value)
+       local char = game.Players.LocalPlayer.Character
+       if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+       
+       if Value then
+           local fire = Instance.new("Fire")
+           fire.Name = "VipFire"
+           fire.Parent = char.HumanoidRootPart
+           fire.Size = 5
+           
+           -- CHỈNH MÀU TẠI ĐÂY
+           fire.Color = Color3.fromRGB(0, 255, 255) -- Màu chính (Ví dụ: Xanh dương)
+           fire.SecondaryColor = Color3.fromRGB(255, 255, 255) -- Màu lõi (Ví dụ: Trắng)
+       else
+           if char.HumanoidRootPart:FindFirstChild("VipFire") then
+               char.HumanoidRootPart.VipFire:Destroy()
+           end
+       end
+   end,
+})
+
+local FireSize = 5 -- Giá trị mặc định
+
+-- Thanh trượt điều chỉnh kích thước
+TrollTab:CreateSlider({
+   Name = "🎃 Kích thước Lửa",
+   Range = {1, 30},
+   Increment = 1,
+   Suffix = "Size",
+   CurrentValue = 5,
+   Flag = "FireSize", 
+   Callback = function(Value)
+      FireSize = Value
+      local char = game.Players.LocalPlayer.Character
+      if char and char.HumanoidRootPart:FindFirstChild("VipFire") then
+          char.HumanoidRootPart.VipFire.Size = Value
+      end
+   end,
+})
+
+TrollTab:CreateSlider({
+    Name = "🔄 Độ nghiêng/Xoay Thân Hình",
+    Range = {0, 640},
+    Increment = 1,
+    CurrentValue = 0,
+    Callback = function(v)
+        local char = lp.Character
+        if not char then return end
+
+        local rad = math.rad(v)
+        -- C0 chuẩn để xoay quanh trục đứng mà không làm biến dạng tư thế gốc quá mức
+        local rotationCFrame = CFrame.Angles(0, 0, rad)
+
+        if char:FindFirstChild("LowerTorso") and char.LowerTorso:FindFirstChild("Root") then
+            -- R15: RootJoint thường nằm trong LowerTorso
+            char.LowerTorso.Root.C0 = CFrame.new(0, 0, 0) * rotationCFrame
+        elseif char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart:FindFirstChild("RootJoint") then
+            -- R6: RootJoint nằm trong HumanoidRootPart
+            char.HumanoidRootPart.RootJoint.C0 = CFrame.new(0, 0, 0) * rotationCFrame
+        end
+    end,
+})
+
+-- Nút Reset nhanh tư thế về mặc định
+TrollTab:CreateButton({
+    Name = "🔄 Reset Tư Thế (Thẳng Đứng)",
+    Callback = function()
+        local char = lp.Character
+        if not char or not char:FindFirstChild("Humanoid") then return end
+
+        -- Giá trị mặc định tuyệt đối của Roblox (không ép góc xoay 180 hay -90)
+        local originC0 = CFrame.new(0, 0, 0) * CFrame.Angles(math.rad(-90), math.rad(180), 0)
+
+        if char:FindFirstChild("LowerTorso") and char.LowerTorso:FindFirstChild("Root") then
+            char.LowerTorso.Root.C0 = originC0
+        end
+        
+        if char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart:FindFirstChild("RootJoint") then
+            char.HumanoidRootPart.RootJoint.C0 = originC0
+        end
+        
+        -- Reset độ cao
+        char.Humanoid.HipHeight = 2
+        
+        -- Mẹo: Ép nhân vật nhảy nhẹ để Engine Roblox cập nhật lại CFrame ngay lập tức
+        char.Humanoid.Jump = true
+        
+        Rayfield:Notify({
+            Title = "Hệ Thống",
+            Content = "Đã reset tư thế về mặc định!",
+            Duration = 2
+        })
+    end,
+})
+
+--- [ 🎭TAB HIỂN THỊ ] ---
+VisualTab:CreateSection("🎗️TÂM ĐẸP TRAI NHẤT HÀNH TINH")
+
+VisualTab:CreateToggle({
+   Name = "🥶 Esp Zombie (🧟‍♀️ Highlight)",
+   CurrentValue = false,
+   Callback = function(Value)
+      _G.ESP_Zombie = Value
+   end,
+})
+
+VisualTab:CreateColorPicker({
+    Name = "🎨 Zombie Color",
+    Color = Color3.fromRGB(255, 0, 0),
+    Callback = function(Value)
+        _G.ZombieColor = Value
+    end,
+})
+
+task.spawn(function()
+    while task.wait(1) do
+        if _G.ESP_Zombie then
+            for _, v in pairs(workspace.Zombies:GetChildren()) do -- Thay 'Zombies' bằng folder chứa zombie của game
+                local highlight = v:FindFirstChild("ESPHighlight") or Instance.new("Highlight")
+                highlight.Name = "ESPHighlight"
+                highlight.Parent = v
+                
+                -- Cập nhật màu từ ColorPicker
+                highlight.FillColor = _G.ZombieColor
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Viền trắng cho rõ
+                highlight.Enabled = true
+            end
+        else
+            -- Tắt ESP khi Toggle off
+            for _, v in pairs(workspace.Zombies:GetChildren()) do
+                if v:FindFirstChild("ESPHighlight") then
+                    v.ESPHighlight.Enabled = false
+                end
+            end
+        end
+    end
+end)
+
+--- [ 🔫 TAB VŨ KHÍ ] ------
+WeaponTab:CreateSection("🎗️TÂM ĐẸP TRAI NHẤT HÀNH TINH")
+
+WeaponTab:CreateToggle({
+   Name = "🥶 Mod Súng (No Recoil/Rapid)",
+   CurrentValue = false,
+   Callback = function(Value)
+      _G.SmartScan = Value
+      if Value then
+          task.spawn(function()
+              while _G.SmartScan do
+                  -- Quét rác bộ nhớ để tìm bảng chứa dữ liệu súng
+                  for _, v in pairs(getgc(true)) do
+                      if type(v) == "table" and (rawget(v, "FireRate") or rawget(v, "Recoil")) then
+                          -- Chỉnh sửa thông số
+                          v.FireRate = 0.05
+                          v.Recoil = 0
+                          v.Spread = 0
+                          v.ReloadTime = 0
+                          
+                          -- Nếu game có nạp đạn nhanh/vô hạn tùy loại:
+                          if rawget(v, "MaxAmmo") then v.MaxAmmo = 999 end
+                          if rawget(v, "CurrentAmmo") then v.CurrentAmmo = 999 end
+                      end
+                  end
+                  task.wait(5) -- Quét lại sau mỗi 5 giây để cập nhật súng mới nhặt
+              end
+          end)
+          
+          Rayfield:Notify({
+             Title = "Vũ Khí",
+             Content = "Đã kích hoạt Mod Súng Siêu Cấp!",
+             Duration = 2
+          })
+      end
+   end,
+})
+
+-- --- [ 🛠 HÀM TIỆN ÍCH ] --- --
+
+-- Tìm Zombie gần nhất còn sống
+function GetClosestZombie()
+    local closest = nil
+    local dist = math.huge
+    -- Lưu ý: Zombie Uprising thường để zombie trong Workspace.Zombies hoặc Workspace.Enemies
+    local enemyFolder = workspace:FindFirstChild("Zombies") or workspace:FindFirstChild("Enemies") 
+    
+    if enemyFolder then
+        for _, v in pairs(enemyFolder:GetChildren()) do
+            if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild(TargetPart) then
+                local d = (lp.Character.Head.Position - v[TargetPart].Position).Magnitude
+                if d < dist then
+                    dist = d
+                    closest = v
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- Dự đoán vị trí dựa trên vận tốc (Prediction)
+function GetPredictedTarget()
+    local target = GetClosestZombie()
+    if target then
+        local part = target[TargetPart]
+        local distance = (part.Position - lp.Character.Head.Position).Magnitude
+        local timeToHit = distance / settings.BulletSpeed
+        
+        -- Công thức: Vị trí mới = Vị trí hiện tại + (Vận tốc * Thời gian bay)
+        local predictedPos = part.Position + (part.Velocity * timeToHit)
+        return predictedPos
+    end
+    return nil
+end
+
+--- [ ⚡ TAB TỐI ƯU & CHỐNG LAG ] ---
+local OptimizationTab = Window:CreateTab("⚡ Tối Ưu", "zap")
+
+OptimizationTab:CreateSection("Công Cụ Tăng Tốc Hệ Thống")
+
+OptimizationTab:CreateToggle({
+   Name = "📉 Chế Độ Siêu Mượt/V2(Smooth Mode)",
+   CurrentValue = false,
+   Callback = function(Value)
+       _G.SmoothMode = Value
+       if Value then
+           -- Tắt các hiệu ứng nặng của Roblox
+           local settings = UserSettings():GetService("UserGameSettings")
+           settings.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
+           
+           for _, v in pairs(game:GetDescendants()) do
+               if v:IsA("PostProcessEffect") or v:IsA("Explosion") then
+                   v.Enabled = false
+               end
+           end
+       end
+   end,
+})
+
+OptimizationTab:CreateToggle({
+   Name = "🌑 Xóa Kết Cấu (No Texture - Max FPS)",
+   CurrentValue = false,
+   Callback = function(Value)
+       if Value then
+           for _, v in pairs(game:GetDescendants()) do
+               if v:IsA("Texture") or v:IsA("Decal") then
+                   v.Transparency = 1
+               end
+           end
+       else
+           for _, v in pairs(game:GetDescendants()) do
+               if v:IsA("Texture") or v:IsA("Decal") then
+                   v.Transparency = 0
+               end
+           end
+       end
+   end,
+})
+
+OptimizationTab:CreateSlider({
+   Name = "🎮 Giới Hạn FPS",
+   Range = {30, 240},
+   Increment = 10,
+   CurrentValue = 60,
+   Callback = function(Value)
+       setfpscap(Value)
+   end,
+})
+
+OptimizationTab:CreateSection("Tối Ưu Vòng Lặp (Core)")
+OptimizationTab:CreateLabel("Bật chế độ này giúp giảm tải CPU khi dùng Auto Farm")
+
+_G.ReduceCPU = false
+OptimizationTab:CreateToggle({
+   Name = "🧠 Tiết Kiệm CPU (Smart Wait)",
+   CurrentValue = false,
+   Callback = function(Value)
+       _G.ReduceCPU = Value
+   end,
+})
+
+--- [ ❄️ TAB HIỆU ỨNG CHILL - PHIÊN BẢN BÃO TUYẾT ] ---
+
+ChillTab:CreateSection("Cài đặt Bão Tuyết")
+
+local snowEnabled = false
+local snowflakes = {}
+local snowFolder = nil
+local maxSnowCount = 150
+
+-- Hàm tạo hạt tuyết
+local function createSnowflake()
+    local p = Instance.new("Part")
+    p.Size = Vector3.new(0.2, 0.2, 0.2)
+    p.Material = Enum.Material.Neon
+    p.Color = Color3.fromRGB(220, 240, 255)
+    p.Transparency = 0.4
+    p.CanCollide = false
+    p.Anchored = true
+    local mesh = Instance.new("SpecialMesh", p)
+    mesh.MeshType = Enum.MeshType.Sphere
+    return p
+end
+
+-- Hàm cập nhật số lượng tuyết
+local function updateSnowCount(count)
+    if not snowFolder then
+        snowFolder = Instance.new("Folder", workspace)
+        snowFolder.Name = "ChillSnowEffects"
+    end
+    
+    -- Xóa bớt nếu giảm slider
+    if #snowflakes > count then
+        for i = #snowflakes, count + 1, -1 do
+            if snowflakes[i] then
+                snowflakes[i].part:Destroy()
+                table.remove(snowflakes, i)
+            end
+        end
+    -- Thêm mới nếu tăng slider
+    elseif #snowflakes < count then
+        for i = #snowflakes + 1, count do
+            table.insert(snowflakes, {
+                part = createSnowflake(),
+                offset = Vector3.new(math.random(-60, 60), math.random(0, 50), math.random(-60, 60)),
+                speed = math.random(80, 150) / 100
+            })
+        end
+    end
+    
+    -- Cập nhật Parent dựa trên trạng thái Toggle
+    for _, data in ipairs(snowflakes) do
+        data.part.Parent = snowEnabled and snowFolder or nil
+    end
+end
+
+-- Toggle Bật/Tắt
+ChillTab:CreateToggle({
+   Name = "🌨️ Kích Hoạt Tuyết Rơi",
+   CurrentValue = false,
+   Callback = function(Value)
+      snowEnabled = Value
+      updateSnowCount(maxSnowCount)
+   end,
+})
+
+-- Slider chỉnh độ dày (NHIỀU)
+ChillTab:CreateSlider({
+   Name = "❄️ Độ Dày Của Tuyết (Bão Tuyết)",
+   Range = {16, 200},
+   Increment = 10,
+   CurrentValue = 30,
+   Callback = function(Value)
+      maxSnowCount = Value
+      if snowEnabled then
+          updateSnowCount(maxSnowCount)
+      end
+   end,
+})
+
+--- [ ❄️ TAB HIỆU ỨNG CHILL - NÂNG CẤP ĐỒ HỌA ] ---
+ChillTab:CreateButton({
+   Name = "💎 Shader Ultra-Chill (Đẹp & Mượt)",
+   Callback = function()
+      local Lighting = game:GetService("Lighting")
+      
+      -- Thiết lập ánh sáng theo hướng Cinematic
+      Lighting.Brightness = 2
+      Lighting.GlobalShadows = true -- Giữ đổ bóng để game trông thật hơn
+      Lighting.OutdoorAmbient = Color3.fromRGB(100, 110, 130)
+      
+      -- Thêm Bloom (Ánh sáng huyền ảo)
+      local bloom = Lighting:FindFirstChild("VipBloom") or Instance.new("BloomEffect", Lighting)
+      bloom.Name = "VipBloom"
+      bloom.Intensity = 0.4
+      bloom.Threshold = 0.8
+      
+      -- Color Correction chuyên sâu
+      local color = Lighting:FindFirstChild("VipColor") or Instance.new("ColorCorrectionEffect", Lighting)
+      color.Name = "VipColor"
+      color.Contrast = 0.15
+      color.Saturation = 0.2 -- Tăng chút màu sắc cho sinh động
+      color.TintColor = Color3.fromRGB(255, 250, 245)
+
+      Rayfield:Notify({
+          Title = "Đồ Họa", 
+          Content = "Đã kích hoạt chế độ hình ảnh Cinematic!", 
+          Duration = 3
+      })
+   end,
+})
+
+--- [ ⚡HỆ THỐNG VÒNG LẶP CORE ] ---
+
+-- God Mode Loop
+RunService.Heartbeat:Connect(function()
+    if _G.GodMode and lp.Character and lp.Character:FindFirstChild("Humanoid") then
+        lp.Character.Humanoid.Health = lp.Character.Humanoid.MaxHealth
+    end
+end)
+
+-- Farm Loop (⚡BẢN NÂNG CẤP: DÍNH ĐẠN + DAMAGE CAO)
+task.spawn(function()
+    while task.wait() do -- Sử dụng task.wait() mặc định để mượt hơn
+        if _G.AutoFarmCoin or _G.AutoKillLan then
+            local char = lp.Character
+            local head = char and char:FindFirstChild("Head")
+            local enemies = workspace:FindFirstChild("Zombies") or workspace:FindFirstChild("Enemies")
+            
+            if head and enemies then
+                local target = nil
+                local dist = settings.range
+
+                -- Quét tìm mục tiêu gần nhất
+                for _, z in ipairs(enemies:GetChildren()) do
+                    local zRoot = z:FindFirstChild("HumanoidRootPart")
+                    local zHum = z:FindFirstChild("Humanoid")
+                    
+                    if zRoot and zHum and zHum.Health > 0 then
+                        local magnitude = (zRoot.Position - head.Position).Magnitude
+                        if magnitude < dist then
+                            dist = magnitude
+                            target = z
+                        end
+                    end
+                end
+
+                -- Nếu tìm thấy mục tiêu
+                if target then
+                    local zRoot = target:FindFirstChild("HumanoidRootPart")
+                    local weapon = _G.AutoKillLan and "PzF 3" or "SMAW"
+                    
+                    -- ÉP TỌA ĐỘ DÍNH VÀO MỤC TIÊU (Sửa lỗi bay xuyên)
+                    local args = {
+                        [1] = {
+                            ["ModelType"] = "Character",
+                            ["TargetPos"] = zRoot.Position, -- Luôn bắn vào tâm quái
+                            ["Model"] = target,
+                            ["PlayerName"] = lp.Name,
+                            ["WeaponName"] = weapon,
+                            ["SourcePart"] = head,
+                            ["SourcePos"] = head.Position
+                        }
+                    }
+                    
+                    -- GỬI PACKET THEO TỐC ĐỘ CỦA SLIDER
+                    -- settings.damage_mult chính là số lần nhân sát thương
+                    for i = 1, (settings.damage_mult or 10) do
+                        remoteF:FireServer(unpack(args))
+                    end
+                    
+                    -- Khoảng nghỉ dựa trên Slider để tránh bị kick (Anti-cheat)
+                    task.wait(settings.attack_speed or 0.1) 
+                end
+            end
+        end
+    end
+end)
+
+--❄Vòng lặp Render xử lý di chuyển tuyết
+RunService.RenderStepped:Connect(function(dt)
+    if snowEnabled and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+        if #snowflakes == 0 then
+            snowFolder = snowFolder or Instance.new("Folder", workspace)
+            for i = 1, 100 do
+                local p = Instance.new("Part")
+                p.Size = Vector3.new(0.2, 0.2, 0.2)
+                p.Material = Enum.Material.Neon
+                p.CanCollide = false
+                p.Anchored = true
+                p.Parent = snowFolder
+                table.insert(snowflakes, {part = p, offset = Vector3.new(math.random(-50, 50), math.random(0, 40), math.random(-50, 50))})
+            end
+        end
+        
+        local rootPos = lp.Character.HumanoidRootPart.Position
+        for _, data in ipairs(snowflakes) do
+            data.offset = data.offset - Vector3.new(0, 15 * dt, 0)
+            if data.offset.Y < -10 then
+                data.offset = Vector3.new(math.random(-50, 50), 30, math.random(-50, 50))
+            end
+            data.part.Position = rootPos + data.offset
+        end
+    end
+end)
+
+-- Vòng lặp xử lý PzF 3 (Đã tối ưu để không làm treo Menu)
+task.spawn(function()
+    while task.wait() do
+        if _G.AutoKillLan then
+            local char = lp.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local enemies = workspace:FindFirstChild("Zombies") or workspace:FindFirstChild("Enemies")
+            
+            if root and enemies then
+                local target = nil
+                local dist = settings.range
+
+                -- Tìm quái gần nhất
+                for _, z in ipairs(enemies:GetChildren()) do
+                    local zRoot = z:FindFirstChild("HumanoidRootPart")
+                    local zHum = z:FindFirstChild("Humanoid")
+                    if zRoot and zHum and zHum.Health > 0 then
+                        local magnitude = (zRoot.Position - root.Position).Magnitude
+                        if magnitude < dist then
+                            dist = magnitude
+                            target = z
+                        end
+                    end
+                end
+
+                if target then
+                    local zRoot = target:FindFirstChild("HumanoidRootPart")
+                    local fakeSource = root.Position + (root.CFrame.LookVector * 2)
+                    
+                    local args = {
+                        [1] = {
+                            ["ModelType"] = "Character",
+                            ["TargetPos"] = zRoot.Position,
+                            ["Model"] = target,
+                            ["PlayerName"] = lp.Name,
+                            ["WeaponName"] = "PzF 3",
+                            ["SourcePart"] = root,
+                            ["SourcePos"] = fakeSource
+                        }
+                    }
+                    
+                    for i = 1, (settings.damage_mult or 10) do
+                        remoteF:FireServer(unpack(args))
+                    end
+                    task.wait(settings.attack_speed or 0.1) -- Nghỉ để không bị spam quá tải
+                end
+            end
+        end
+    end
+end)
+
+-- ==========================================
+-- PHẦN INTRO CỰC CHÁY CỦA TÂM ĐẸP ZAI
+-- ==========================================
+
+local function StartIntro()
+    -- Thông báo bắt đầu tải (Loading)
+    Rayfield:Notify({
+       Title = "🌀 ĐANG KHỞI TẠO HỆ THỐNG...",
+       Content = "Đang kết nối tới máy chủ Tâm Đẹp Zai V5...",
+       Duration = 2,
+       Image = 4483345998, -- Icon hệ thống
+    })
+    
+    task.wait(2.5) -- Chờ một chút cho chuyên nghiệp
+
+    -- Thông báo chính thức của bạn
+    Rayfield:Notify({
+       Title = "😎 TÂM ĐẸP ZAII 🌀",
+       Content = "Hệ Thống Chính Thức V5 (KHỞI TẠO CHEAT TÂM ĐẸP ZAI NHẤT VŨ TRỤ) đã sẵn sàng!",
+       Duration = 6,
+       Image = "check", -- Icon dấu tích thành công
+    })
+
+    print("------------------------------------------")
+    print("Welcome, Master Tam Dep Zai!")
+    print("System Status: V5 Activated - God Mode On")
+    print("------------------------------------------")
+end
+
+StartIntro()
+
+-- ==========================================
+-- TIẾP THEO LÀ PHẦN CODE TAB CỦA BẠN...
+-- ==========================================
